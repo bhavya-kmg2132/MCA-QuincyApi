@@ -1,0 +1,11 @@
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\bin\Debug\net10.0\MCAQuincyApi.Domain.deps.json
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\bin\Debug\net10.0\MCAQuincyApi.Domain.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\bin\Debug\net10.0\MCAQuincyApi.Domain.pdb
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\obj\Debug\net10.0\MCAQuincyApi.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\obj\Debug\net10.0\MCAQuincyApi.Domain.AssemblyInfoInputs.cache
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\obj\Debug\net10.0\MCAQuincyApi.Domain.AssemblyInfo.cs
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\obj\Debug\net10.0\MCAQuincyApi.Domain.csproj.CoreCompileInputs.cache
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\obj\Debug\net10.0\MCAQuincyApi.Domain.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\obj\Debug\net10.0\refint\MCAQuincyApi.Domain.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\obj\Debug\net10.0\MCAQuincyApi.Domain.pdb
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Domain\obj\Debug\net10.0\ref\MCAQuincyApi.Domain.dll

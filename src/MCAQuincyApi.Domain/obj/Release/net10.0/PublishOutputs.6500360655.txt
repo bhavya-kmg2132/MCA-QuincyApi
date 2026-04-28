@@ -1,0 +1,3 @@
+C:\Publish\MCAQuincyApi\MCAQuincyApi.Domain.dll
+C:\Publish\MCAQuincyApi\MCAQuincyApi.Domain.deps.json
+C:\Publish\MCAQuincyApi\MCAQuincyApi.Domain.pdb

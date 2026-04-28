@@ -1,0 +1,15 @@
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\bin\Release\net10.0\MCAQuincyApi.Application.deps.json
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\bin\Release\net10.0\MCAQuincyApi.Application.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\bin\Release\net10.0\MCAQuincyApi.Application.pdb
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\bin\Release\net10.0\MCAQuincyApi.Domain.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\bin\Release\net10.0\MCAQuincyApi.Domain.pdb
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\MCAQuincyApi.Application.csproj.AssemblyReference.cache
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\MCAQuincyApi.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\MCAQuincyApi.Application.AssemblyInfoInputs.cache
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\MCAQuincyApi.Application.AssemblyInfo.cs
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\MCAQuincyApi.Application.csproj.CoreCompileInputs.cache
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\MCAQuinc.FC25F70A.Up2Date
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\MCAQuincyApi.Application.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\refint\MCAQuincyApi.Application.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\MCAQuincyApi.Application.pdb
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Release\net10.0\ref\MCAQuincyApi.Application.dll

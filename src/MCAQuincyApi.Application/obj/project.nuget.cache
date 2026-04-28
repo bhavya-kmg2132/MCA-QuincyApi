@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "XwwCb+pN17Q=",
+  "success": true,
+  "projectFilePath": "C:\\Work Space\\MCA-QuincyApi\\src\\MCAQuincyApi.Application\\MCAQuincyApi.Application.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Admin\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.7\\microsoft.extensions.dependencyinjection.abstractions.10.0.7.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.7\\microsoft.extensions.logging.abstractions.10.0.7.nupkg.sha512"
+  ],
+  "logs": []
+}
