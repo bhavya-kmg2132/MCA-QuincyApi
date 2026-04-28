@@ -132,3 +132,4 @@ C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.API\bin\Debug\net10.0\MCAQuincyApi.
 C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.API\obj\Debug\net10.0\MCAQuinc.58E93576.Up2Date
 C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.API\obj\Debug\net10.0\MCAQuincyApi.API.genruntimeconfig.cache
 C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.API\obj\Debug\net10.0\ref\MCAQuincyApi.API.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.API\obj\Debug\net10.0\MCAQuincyApi.API.sourcelink.json
