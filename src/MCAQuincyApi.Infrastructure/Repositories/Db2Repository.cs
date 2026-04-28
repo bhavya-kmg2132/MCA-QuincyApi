@@ -4,6 +4,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
@@ -20,6 +24,8 @@ public class Db2Repository : IDb2Repository {
     private readonly string _searchPoliciesQuery;
     private readonly string _getPolicyByIdQuery;
     private readonly string _updatePolicyPhoneQuery;
+    private readonly string _apiUrl;
+    private static readonly HttpClient _httpClient = new HttpClient();
     
     public Db2Repository(IConfiguration configuration, ILogger<Db2Repository> logger) {
         _logger = logger;
@@ -43,6 +49,8 @@ public class Db2Repository : IDb2Repository {
         _searchPoliciesQuery = configuration["Db2Queries:SearchPolicies"] ?? throw new InvalidOperationException("Missing Db2Queries:SearchPolicies configuration.");
         _getPolicyByIdQuery = configuration["Db2Queries:GetPolicyById"] ?? throw new InvalidOperationException("Missing Db2Queries:GetPolicyById configuration.");
         _updatePolicyPhoneQuery = configuration["Db2Queries:UpdatePolicyPhone"] ?? throw new InvalidOperationException("Missing Db2Queries:UpdatePolicyPhone configuration.");
+        
+        _apiUrl = configuration["ExternalApi:PolicyUrl"] ?? throw new InvalidOperationException("Missing ExternalApi:PolicyUrl configuration.");
     }
 
     public async Task<IEnumerable<TempData>> GetSourceDataAsync() {
@@ -80,6 +88,20 @@ public class Db2Repository : IDb2Repository {
 {
     try
     {
+        var apiPolicies = await FetchPoliciesFromApiAsync();
+        
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.Trim().Replace(" ", "").ToLowerInvariant();
+            return apiPolicies.Where(p => 
+                (p.InsuredName != null && p.InsuredName.Replace(" ", "").ToLowerInvariant().Contains(normalizedSearch)) ||
+                (p.PolicyNo != null && p.PolicyNo.Replace(" ", "").ToLowerInvariant().Contains(normalizedSearch))
+            ).ToList();
+        }
+
+        return apiPolicies;
+
+#if false
         var policies = new List<Policy>();
         
         // Normalize search once — null if empty/whitespace
@@ -116,12 +138,15 @@ public class Db2Repository : IDb2Repository {
         }
 
         return policies;
+#endif
     }
+#if false
     catch (OdbcException ex)
     {
         _logger.LogError(ex, "ODBC error occurred while fetching policies.");
         throw;
     }
+#endif
     catch (Exception ex)
     {
         _logger.LogError(ex, "An unexpected error occurred while fetching policies.");
@@ -140,6 +165,12 @@ public class Db2Repository : IDb2Repository {
     public async Task<Policy?> GetPolicyByIdAsync(string policyId)
     {
         try {
+            var apiPolicies = await FetchPoliciesFromApiAsync();
+            return apiPolicies.FirstOrDefault(p => 
+                string.Equals(p.PolicyId, policyId, StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(p.PolicyNo, policyId, StringComparison.OrdinalIgnoreCase));
+
+#if false
             string sql = string.Format(_getPolicyByIdQuery, _as400Settings.Library, _as400Settings.Table);
     
             await using var connection = new OdbcConnection(_connectionString);
@@ -160,6 +191,7 @@ public class Db2Repository : IDb2Repository {
                 return MapToPolicy(reader, ordinals);
             }
             return null;
+#endif
         } catch (OdbcException ex) {
             _logger.LogError(ex, "ODBC error occurred while fetching policy by ID {PolicyId}.", policyId);
             throw;
@@ -334,5 +366,72 @@ public class Db2Repository : IDb2Repository {
             }
             return null;
         } catch { return null; }
+    }
+
+    private async Task<List<Policy>> FetchPoliciesFromApiAsync()
+    {
+        var responseJson = await _httpClient.GetStringAsync(_apiUrl);
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var apiResponse = JsonSerializer.Deserialize<PolicyApiResponse>(responseJson, options);
+        
+        var policies = new List<Policy>();
+        if (apiResponse?.Result == null) return policies;
+
+        foreach (var item in apiResponse.Result)
+        {
+            policies.Add(new Policy
+            {
+                QuoteId = item.QUOTEID.ToString(),
+                PolicyId = item.POLICYNUMBER?.Trim() ?? string.Empty, // Map number as ID for endpoint lookups
+                PolicyNo = item.POLICYNUMBER?.Trim(),
+                InsuredName = item.INSUREDNAME?.Trim() ?? string.Empty,
+                LineOfBusiness = item.LINEOFBUSINESS?.Trim(),
+                EffectiveDate = ParseApiDate(item.EFFECTIVEDATE),
+                ExpirationDate = ParseApiDate(item.EXPIRATIONDATE),
+                Status = item.STATUS?.Trim(),
+                TotalPremium = item.PREMIUM,
+                AgentCode = item.AGENTCODE?.Trim(),
+                TransactionDate = ParseApiDate(item.TRANSDATE),
+                EndorseDate = ParseApiDate(item.ENDORSEDATE),
+                TransactionType = item.TRANSACTIONTYPE?.Trim(),
+                HeldBy = item.HELDBY?.Trim()
+            });
+        }
+        return policies;
+    }
+
+    private static DateTime? ParseApiDate(int dateInt)
+    {
+        if (dateInt <= 0) return null;
+        string dateStr = dateInt.ToString();
+        if (dateStr.Length != 8) return null;
+        if (DateTime.TryParseExact(dateStr, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var dt))
+        {
+            return dt;
+        }
+        return null;
+    }
+
+    private class PolicyApiResponse
+    {
+        [JsonPropertyName("result")]
+        public List<ApiPolicyDto>? Result { get; set; }
+    }
+
+    private class ApiPolicyDto
+    {
+        public int QUOTEID { get; set; }
+        public string? POLICYNUMBER { get; set; }
+        public string? INSUREDNAME { get; set; }
+        public string? LINEOFBUSINESS { get; set; }
+        public int EFFECTIVEDATE { get; set; }
+        public int EXPIRATIONDATE { get; set; }
+        public string? STATUS { get; set; }
+        public decimal PREMIUM { get; set; }
+        public string? AGENTCODE { get; set; }
+        public int TRANSDATE { get; set; }
+        public int ENDORSEDATE { get; set; }
+        public string? TRANSACTIONTYPE { get; set; }
+        public string? HELDBY { get; set; }
     }
 }
