@@ -1,9 +1,14 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MCAQuincyApi.Application.Interfaces;
+using MCAQuincyApi.Domain.Entities;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace MCAQuincyApi.Application.Services;
@@ -27,7 +32,7 @@ public class PolicyService : IPolicyService
     }
 
     /// <inheritdoc />
-    public async Task<object> GetPolicyQuotesAsync(string? policyNumber, string? insuredName, string? agentCode)
+    public async Task<IEnumerable<Policy>> GetPolicyQuotesAsync(string? policyNumber, string? insuredName, string? agentCode)
     {
         _logger.LogInformation(
             "Calling external API: POST {BaseUrl}/quotes. PolicyNumber={PolicyNumber}, InsuredName={InsuredName}, AgentCode={AgentCode}",
@@ -47,11 +52,11 @@ public class PolicyService : IPolicyService
         response.EnsureSuccessStatusCode();
 
         var responseBody = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<object>(responseBody, _jsonOptions)!;
+        return MapApiResponseToPolicies(responseBody);
     }
 
     /// <inheritdoc />
-    public async Task<object?> GetPolicyByNumberAsync(string policyNumber)
+    public async Task<Policy?> GetPolicyByNumberAsync(string policyNumber)
     {
         _logger.LogInformation(
             "Calling external API: GET {BaseUrl}/{PolicyNumber}", _baseUrl, policyNumber);
@@ -67,11 +72,14 @@ public class PolicyService : IPolicyService
         response.EnsureSuccessStatusCode();
 
         var responseBody = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<object>(responseBody, _jsonOptions);
+        var policies = MapApiResponseToPolicies(responseBody);
+        // Return first match since this is a single-policy lookup
+        using var enumerator = policies.GetEnumerator();
+        return enumerator.MoveNext() ? enumerator.Current : null;
     }
 
     /// <inheritdoc />
-    public async Task<object> UpdatePolicyPhoneAsync(string policyNumber, string telephone)
+    public async Task<Policy?> UpdatePolicyPhoneAsync(string policyNumber, string telephone)
     {
         _logger.LogInformation(
             "Calling external API: POST {BaseUrl}/SavePolicyInfo. PolicyNumber={PolicyNumber}",
@@ -90,6 +98,76 @@ public class PolicyService : IPolicyService
         response.EnsureSuccessStatusCode();
 
         var responseBody = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<object>(responseBody, _jsonOptions)!;
+        var policies = MapApiResponseToPolicies(responseBody);
+        using var enumerator = policies.GetEnumerator();
+        return enumerator.MoveNext() ? enumerator.Current : null;
+    }
+
+    // ── Response mapping (same logic as Db2Repository.FetchPoliciesFromApiAsync) ──
+
+    private List<Policy> MapApiResponseToPolicies(string responseJson)
+    {
+        var apiResponse = JsonSerializer.Deserialize<PolicyApiResponse>(responseJson, _jsonOptions);
+        var policies = new List<Policy>();
+        if (apiResponse?.Result == null) return policies;
+
+        foreach (var item in apiResponse.Result)
+        {
+            policies.Add(new Policy
+            {
+                QuoteId = item.QUOTEID.ToString(),
+                PolicyId = item.POLICYNUMBER?.Trim() ?? string.Empty,
+                PolicyNo = item.POLICYNUMBER?.Trim(),
+                InsuredName = item.INSUREDNAME?.Trim() ?? string.Empty,
+                LineOfBusiness = item.LINEOFBUSINESS?.Trim(),
+                EffectiveDate = ParseApiDate(item.EFFECTIVEDATE),
+                ExpirationDate = ParseApiDate(item.EXPIRATIONDATE),
+                Status = item.STATUS?.Trim(),
+                TotalPremium = item.PREMIUM,
+                AgentCode = item.AGENTCODE?.Trim(),
+                TransactionDate = ParseApiDate(item.TRANSDATE),
+                EndorseDate = ParseApiDate(item.ENDORSEDATE),
+                TransactionType = item.TRANSACTIONTYPE?.Trim(),
+                HeldBy = item.HELDBY?.Trim()
+            });
+        }
+        return policies;
+    }
+
+    private static DateTime? ParseApiDate(int dateInt)
+    {
+        if (dateInt <= 0) return null;
+        string dateStr = dateInt.ToString();
+        if (dateStr.Length != 8) return null;
+        if (DateTime.TryParseExact(dateStr, "yyyyMMdd", null, DateTimeStyles.None, out var dt))
+        {
+            return dt;
+        }
+        return null;
+    }
+
+    // ── DTOs matching the external API response shape ──
+
+    private class PolicyApiResponse
+    {
+        [JsonPropertyName("result")]
+        public List<ApiPolicyDto>? Result { get; set; }
+    }
+
+    private class ApiPolicyDto
+    {
+        public int QUOTEID { get; set; }
+        public string? POLICYNUMBER { get; set; }
+        public string? INSUREDNAME { get; set; }
+        public string? LINEOFBUSINESS { get; set; }
+        public int EFFECTIVEDATE { get; set; }
+        public int EXPIRATIONDATE { get; set; }
+        public string? STATUS { get; set; }
+        public decimal PREMIUM { get; set; }
+        public string? AGENTCODE { get; set; }
+        public int TRANSDATE { get; set; }
+        public int ENDORSEDATE { get; set; }
+        public string? TRANSACTIONTYPE { get; set; }
+        public string? HELDBY { get; set; }
     }
 }
