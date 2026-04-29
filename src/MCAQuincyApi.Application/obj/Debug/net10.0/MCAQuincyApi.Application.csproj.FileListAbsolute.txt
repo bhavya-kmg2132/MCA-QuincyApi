@@ -13,3 +13,4 @@ C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Debug\net10.0\MCAQu
 C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Debug\net10.0\refint\MCAQuincyApi.Application.dll
 C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Debug\net10.0\MCAQuincyApi.Application.pdb
 C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Debug\net10.0\ref\MCAQuincyApi.Application.dll
+C:\Work Space\MCA-QuincyApi\src\MCAQuincyApi.Application\obj\Debug\net10.0\MCAQuincyApi.Application.sourcelink.json
