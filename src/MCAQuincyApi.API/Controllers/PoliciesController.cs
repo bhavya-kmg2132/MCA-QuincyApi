@@ -17,29 +17,43 @@ public class PoliciesController : ControllerBase
         _policyService = policyService;
     }
 
-    [HttpPost]
+    /// <summary>
+    /// Search policy quotes.
+    /// Proxies to: POST http://10.1.16.145:8020/api/v2/policy/quotes
+    /// </summary>
+    [HttpPost("quotes")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> SearchPolicies([FromBody] PolicySearchRequest? request)
+    public async Task<IActionResult> SearchPolicyQuotes([FromBody] PolicyQuotesSearchRequest? request)
     {
-        var policies = await _policyService.GetPoliciesAsync(request?.Search);
-        return Ok(policies);
+        var result = await _policyService.GetPolicyQuotesAsync(
+            request?.PolicyNumber,
+            request?.InsuredName,
+            request?.AgentCode);
+        return Ok(result);
     }
 
-    [HttpGet("{id}")]
+    /// <summary>
+    /// Get policy details by policy number.
+    /// Proxies to: GET http://10.1.16.145:8020/api/v2/policy/{policyNumber}
+    /// </summary>
+    [HttpGet("{policyNumber}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPolicyById(string id)
+    public async Task<IActionResult> GetPolicyDetails(string policyNumber)
     {
-        var policy = await _policyService.GetPolicyByIdAsync(id);
-        return policy == null ? NotFound() : Ok(policy);
+        var result = await _policyService.GetPolicyByNumberAsync(policyNumber);
+        return result == null ? NotFound() : Ok(result);
     }
 
-    [HttpPut("{id}/phone")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdatePolicyPhone(string id, [FromBody] UpdatePhoneRequest request)
+    /// <summary>
+    /// Update phone number for a policy.
+    /// Proxies to: POST http://10.1.16.145:8020/api/v2/policy/SavePolicyInfo
+    /// </summary>
+    [HttpPost("SavePolicyInfo")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SavePolicyInfo([FromBody] SavePolicyInfoRequest request)
     {
-        var success = await _policyService.UpdatePolicyPhoneAsync(id, request.PhoneNumber);
-        return !success ? NotFound() : NoContent();
+        var result = await _policyService.UpdatePolicyPhoneAsync(request.PolicyNumber, request.Telephone);
+        return Ok(result);
     }
 }

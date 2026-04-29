@@ -1,43 +1,95 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MCAQuincyApi.Application.Interfaces;
-using MCAQuincyApi.Domain.Entities;
-using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace MCAQuincyApi.Application.Services;
 
 public class PolicyService : IPolicyService
 {
-    private readonly IDb2Repository _db2Repository;
+    private readonly HttpClient _httpClient;
+    private readonly string _baseUrl;
     private readonly ILogger<PolicyService> _logger;
-
-    public PolicyService(IDb2Repository db2Repository, ILogger<PolicyService> logger)
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
-        _db2Repository = db2Repository;
+        PropertyNameCaseInsensitive = true
+    };
+
+    public PolicyService(HttpClient httpClient, IConfiguration configuration, ILogger<PolicyService> logger)
+    {
+        _httpClient = httpClient;
         _logger = logger;
+        _baseUrl = configuration["ExternalApi:BaseUrl"]
+            ?? throw new InvalidOperationException("Missing ExternalApi:BaseUrl configuration.");
     }
 
-    public async Task<IEnumerable<Policy>> GetPoliciesAsync(string? search)
+    /// <inheritdoc />
+    public async Task<object> GetPolicyQuotesAsync(string? policyNumber, string? insuredName, string? agentCode)
     {
         _logger.LogInformation(
-            "Fetching policies from DB2 with search filter. Search: {Search}.",
-            search);
-        return await _db2Repository.GetPoliciesAsync(search);
+            "Calling external API: POST {BaseUrl}/quotes. PolicyNumber={PolicyNumber}, InsuredName={InsuredName}, AgentCode={AgentCode}",
+            _baseUrl, policyNumber, insuredName, agentCode);
+
+        var requestBody = new
+        {
+            PolicyNumber = policyNumber ?? string.Empty,
+            insuredName = insuredName ?? string.Empty,
+            agentCode = agentCode ?? string.Empty
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _httpClient.PostAsync($"{_baseUrl}/quotes", content);
+        response.EnsureSuccessStatusCode();
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<object>(responseBody, _jsonOptions)!;
     }
 
-    public async Task<Policy?> GetPolicyByIdAsync(string policyId)
+    /// <inheritdoc />
+    public async Task<object?> GetPolicyByNumberAsync(string policyNumber)
     {
-        _logger.LogInformation("Fetching policy with ID {PolicyId} from DB2.", policyId);
-        return await _db2Repository.GetPolicyByIdAsync(policyId);
-    }
+        _logger.LogInformation(
+            "Calling external API: GET {BaseUrl}/{PolicyNumber}", _baseUrl, policyNumber);
 
-    public async Task<bool> UpdatePolicyPhoneAsync(string policyId, string phoneNumber)
-    {
-        _logger.LogInformation("Updating phone numbers for policy with ID {PolicyId}.", policyId);
-        var success = await _db2Repository.UpdatePolicyPhoneAsync(policyId, phoneNumber);
-        if (!success) {
-            _logger.LogWarning("Failed to update phone numbers for policy {PolicyId}. Policy may not exist.", policyId);
+        var response = await _httpClient.GetAsync($"{_baseUrl}/{policyNumber}");
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning("Policy {PolicyNumber} not found in external API.", policyNumber);
+            return null;
         }
-        return success;
+
+        response.EnsureSuccessStatusCode();
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<object>(responseBody, _jsonOptions);
+    }
+
+    /// <inheritdoc />
+    public async Task<object> UpdatePolicyPhoneAsync(string policyNumber, string telephone)
+    {
+        _logger.LogInformation(
+            "Calling external API: POST {BaseUrl}/SavePolicyInfo. PolicyNumber={PolicyNumber}",
+            _baseUrl, policyNumber);
+
+        var requestBody = new
+        {
+            telephone,
+            policyNumber
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _httpClient.PostAsync($"{_baseUrl}/SavePolicyInfo", content);
+        response.EnsureSuccessStatusCode();
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<object>(responseBody, _jsonOptions)!;
     }
 }

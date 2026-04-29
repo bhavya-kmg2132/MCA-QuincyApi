@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MCAQuincyApi.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+faafa3cb952d3f8eaa62314162bdf551287dd98b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7f748ac35bf40149897e6666080d643d6b9d9ff9")]
 [assembly: System.Reflection.AssemblyProductAttribute("MCAQuincyApi.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MCAQuincyApi.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
