@@ -102,8 +102,7 @@
               "RelativeToolTip": "..\\..\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
               "ViewState": "AgIAAMgTAAAAAAAAAAAAAAIUAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
-              "WhenOpened": "2026-04-24T09:08:06.811Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-24T09:08:06.811Z"
             },
             {
               "$type": "Document",
@@ -115,8 +114,7 @@
               "RelativeToolTip": "src\\MCAQuincyApi.Infrastructure\\Repositories\\Db2Repository.cs",
               "ViewState": "AgIAACYAAAAAAAAAAAAUwAoBAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-23T13:36:05.842Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-23T13:36:05.842Z"
             },
             {
               "$type": "Document",
@@ -284,8 +282,7 @@
               "RelativeToolTip": "src\\MCAQuincyApi.Domain\\MCAQuincyApi.Domain.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-04-23T08:20:32.317Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-23T08:20:32.317Z"
             }
           ]
         }
