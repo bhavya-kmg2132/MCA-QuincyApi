@@ -17,12 +17,8 @@ builder.Services.AddScoped<IDb2Repository, Db2Repository>();
 
 builder.Services.AddScoped<IPostgresRepository, PostgresRepository>();
 builder.Services.AddScoped<IDataSyncService, DataSyncService>();
-<<<<<<< HEAD
 builder.Services.AddHttpClient<IPolicyService, PolicyService>();
 
-=======
-builder.Services.AddScoped<IPolicyService, PolicyService>();
->>>>>>> 43cc1a5f5aff4817593a6c753ccbc1c2b4edec73
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
