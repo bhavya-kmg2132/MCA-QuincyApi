@@ -51,11 +51,11 @@ public class PolicyService : IPolicyService
             "Calling external API: POST {BaseUrl}/api/v2/policy/quotes. InsuredName={InsuredName}, AgentCode={AgentCode}, QuoteNumber={QuoteNumber}, Limit={Limit}",
             _baseUrl, insuredName, agentCode, quoteNumber, limit);
 
-        var requestBody = new { PolicyNumber = "", insuredName, agentCode, limit };
+        var requestBody = new { quoteNumber, insuredName, agentCode, limit };
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/quotes") { Content = content };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/policy/GetQuotes") { Content = content };
         AddApiKeyHeader(request);
 
         var response = await _httpClient.SendAsync(request);
@@ -71,7 +71,7 @@ public class PolicyService : IPolicyService
         {
             var errorBody = await response.Content.ReadAsStringAsync();
             _logger.LogError(
-                "External API returned {StatusCode} for POST /api/v2/policy/quotes. Response: {ErrorBody}",
+                "External API returned {StatusCode} for POST /api/policy/GetQuotes. Response: {ErrorBody}",
                 (int)response.StatusCode, errorBody);
             response.EnsureSuccessStatusCode();
         }
@@ -84,10 +84,10 @@ public class PolicyService : IPolicyService
     public async Task<Policy?> GetPolicyByNumberAsync(string policyNumber)
     {
         _logger.LogInformation(
-            "Calling external API: GET {BaseUrl}/api/v2/Policy/{PolicyNumber}",
+            "Calling external API: GET {BaseUrl}/api/Policy/{PolicyNumber}",
             _baseUrl, policyNumber);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}api/v2/Policy/{Uri.EscapeDataString(policyNumber)}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}api/Policy/{Uri.EscapeDataString(policyNumber)}");
         AddApiKeyHeader(request);
 
         var response = await _httpClient.SendAsync(request);
@@ -115,7 +115,7 @@ public class PolicyService : IPolicyService
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/SavePolicyInfo") { Content = content };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/policy/SavePolicyInfo") { Content = content };
         AddApiKeyHeader(request);
 
         var response = await _httpClient.SendAsync(request);
