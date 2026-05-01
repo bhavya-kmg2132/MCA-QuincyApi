@@ -1,0 +1,30 @@
+## Ignore .codex-run directory and CLAUDE.md
+.codex-run/
+CLAUDE.md
+
+## .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+
+## Visual Studio
+.vs/
+*.vshost.exe
+*.vshost.exe.manifest
+
+## .NET home
+.dotnet-home/
+
+## NuGet
+*.nupkg
+packages/
+*.lock.json
+
+## OS files
+Thumbs.db
+.DS_Store
+
+## Logs
+*.log

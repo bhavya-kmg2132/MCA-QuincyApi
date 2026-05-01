@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MCAQuincyApi.API/MCAQuincyApi.API.csproj" />
+    <Project Path="src/MCAQuincyApi.Application/MCAQuincyApi.Application.csproj" />
+    <Project Path="src/MCAQuincyApi.Domain/MCAQuincyApi.Domain.csproj" />
+    <Project Path="src/MCAQuincyApi.Infrastructure/MCAQuincyApi.Infrastructure.csproj" />
+  </Folder>
+</Solution>
