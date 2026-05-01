@@ -10,7 +10,7 @@ public interface IPolicyService
     /// Search policy quotes via the external API.
     /// POST /api/v2/policy/quotes
     /// </summary>
-    Task<IEnumerable<Policy>> GetPolicyQuotesAsync( string? insuredName, string? agentCode, string? quoteNumber);
+    Task<IEnumerable<Policy>> GetPolicyQuotesAsync( string? insuredName, string? agentCode, string? quoteNumber, int? limit = null);
 
     /// <summary>
     /// Get policy details by policy number from the external API.

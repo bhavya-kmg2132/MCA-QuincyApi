@@ -18,6 +18,7 @@ public class PolicyService : IPolicyService
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
+    private readonly string _apiKey;
     private readonly ILogger<PolicyService> _logger;
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -30,6 +31,13 @@ public class PolicyService : IPolicyService
         _logger = logger;
         _baseUrl = configuration["ExternalApi:BaseUrl"]
             ?? throw new InvalidOperationException("Missing ExternalApi:BaseUrl configuration.");
+        _apiKey = configuration["ExternalApi:ApiKey"]
+            ?? throw new InvalidOperationException("Missing ExternalApi:ApiKey configuration.");
+    }
+
+    private void AddApiKeyHeader(HttpRequestMessage request)
+    {
+        request.Headers.Add("x-api-key", _apiKey);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -37,22 +45,25 @@ public class PolicyService : IPolicyService
     // ──────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public async Task<IEnumerable<Policy>> GetPolicyQuotesAsync( string? insuredName, string? agentCode, string? quoteNumber)
+    public async Task<IEnumerable<Policy>> GetPolicyQuotesAsync( string? insuredName, string? agentCode, string? quoteNumber, int? limit = null)
     {
         _logger.LogInformation(
-            "Calling external API: POST {BaseUrl}/GetQuotes. InsuredName={InsuredName}, AgentCode={AgentCode}, QuoteNumber={QuoteNumber}",
-            _baseUrl, insuredName, agentCode, quoteNumber);
+            "Calling external API: POST {BaseUrl}/api/v2/policy/quotes. InsuredName={InsuredName}, AgentCode={AgentCode}, QuoteNumber={QuoteNumber}, Limit={Limit}",
+            _baseUrl, insuredName, agentCode, quoteNumber, limit);
 
-        var requestBody = new { insuredName, agentCode, quoteNumber };
+        var requestBody = new { PolicyNumber = "", insuredName, agentCode, limit };
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var response = await _httpClient.PostAsync($"{_baseUrl}GetQuotesByParam", content);
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/quotes") { Content = content };
+        AddApiKeyHeader(request);
+
+        var response = await _httpClient.SendAsync(request);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             _logger.LogWarning(
-                "External API returned 404 for POST /GetQuotesByParam. InsuredName={InsuredName}, AgentCode={AgentCode}, QuoteNumber={QuoteNumber}", insuredName, agentCode, quoteNumber);
+                "External API returned 404 for POST /api/v2/policy/quotes. InsuredName={InsuredName}, AgentCode={AgentCode}, QuoteNumber={QuoteNumber}", insuredName, agentCode, quoteNumber);
             return new List<Policy>();
         }
 
@@ -60,7 +71,7 @@ public class PolicyService : IPolicyService
         {
             var errorBody = await response.Content.ReadAsStringAsync();
             _logger.LogError(
-                "External API returned {StatusCode} for POST /GetQuotes. Response: {ErrorBody}",
+                "External API returned {StatusCode} for POST /api/v2/policy/quotes. Response: {ErrorBody}",
                 (int)response.StatusCode, errorBody);
             response.EnsureSuccessStatusCode();
         }
@@ -73,11 +84,13 @@ public class PolicyService : IPolicyService
     public async Task<Policy?> GetPolicyByNumberAsync(string policyNumber)
     {
         _logger.LogInformation(
-            "Calling external API: GET {BaseUrl}QuotesPolicyInfo. PolicyNumber={PolicyNumber}",
+            "Calling external API: GET {BaseUrl}/api/v2/Policy/{PolicyNumber}",
             _baseUrl, policyNumber);
 
-        var response = await _httpClient.GetAsync(
-            $"{_baseUrl}QuotesPolicyInfo/{{PolicyId}}?policyid={Uri.EscapeDataString(policyNumber)}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}api/v2/Policy/{Uri.EscapeDataString(policyNumber)}");
+        AddApiKeyHeader(request);
+
+        var response = await _httpClient.SendAsync(request);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -95,21 +108,23 @@ public class PolicyService : IPolicyService
     public async Task<bool> UpdatePolicyPhoneAsync(string policyNumber, string telephone)
     {
         _logger.LogInformation(
-            "Calling external API: POST {BaseUrl}/SavePolicyInfo. PolicyNumber={PolicyNumber}",
+            "Calling external API: POST {BaseUrl}/api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}",
             _baseUrl, policyNumber);
 
-        var relatedPolicyNumber = policyNumber;
-        var requestBody = new { telephone, relatedPolicyNumber };
+        var requestBody = new { telephone, policyNumber };
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var response = await _httpClient.PostAsync($"{_baseUrl}SavePolicyInfo", content);
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/SavePolicyInfo") { Content = content };
+        AddApiKeyHeader(request);
+
+        var response = await _httpClient.SendAsync(request);
 
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync();
             _logger.LogError(
-                "External API returned {StatusCode} for POST /SavePolicyInfo. PolicyNumber={PolicyNumber}, Response: {ErrorBody}",
+                "External API returned {StatusCode} for POST /api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}, Response: {ErrorBody}",
                 (int)response.StatusCode, policyNumber, errorBody);
             response.EnsureSuccessStatusCode();
         }

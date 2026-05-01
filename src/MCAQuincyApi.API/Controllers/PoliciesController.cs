@@ -21,22 +21,22 @@ public class PoliciesController : ControllerBase
     /// Search policy quotes.
     /// Proxies to: POST http://10.1.16.145:8020/api/v2/policy/quotes
     /// </summary>
-    [HttpPost("quotes")]
+    [HttpPost("GetQuotes")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> SearchPolicyQuotes([FromBody] PolicyQuotesSearchRequest? request)
+    public async Task<IActionResult> GetQuotes([FromBody] PolicyQuotesSearchRequest? request)
     {
         var result = await _policyService.GetPolicyQuotesAsync(
             request?.insuredName,
             request?.agentCode,
-            request?.quoteNumber
-           // request?.searchkey
+            request?.quoteNumber,
+            request?.limit
            );
         return Ok(result);
     }
 
     /// <summary>
     /// Get policy details by policy number.
-    /// Proxies to: GET http://10.1.16.145:8020/api/v2/policy/{policyNumber}
+    /// Proxies to: GET http://10.1.16.145:8020/api/Policy/{policyNumber}
     /// </summary>
     [HttpGet("{policyNumber}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -49,7 +49,7 @@ public class PoliciesController : ControllerBase
 
     /// <summary>
     /// Update phone number for a policy.
-    /// Proxies to: POST http://10.1.16.145:8020/api/v2/policy/SavePolicyInfo
+    /// Proxies to: POST http://10.1.16.145:8020/api/policy/SavePolicyInfo
     /// </summary>
     [HttpPost("SavePolicyInfo")]
     [ProducesResponseType(StatusCodes.Status200OK)]
