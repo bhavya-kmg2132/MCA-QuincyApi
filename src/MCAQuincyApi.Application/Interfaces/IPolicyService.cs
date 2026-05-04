@@ -23,4 +23,10 @@ public interface IPolicyService
     /// POST /api/v2/policy/SavePolicyInfo
     /// </summary>
     Task<Policy?> UpdatePolicyPhoneAsync(string policyNumber, string telephone);
+
+    Task<IEnumerable<Policy>> GetPolicyQuotesV2Async(string? insuredName, string? agentCode, string? policyNumber, int? limit = null);
+
+    Task<Policy?> GetPolicyByNumberV2Async(string policyNumber);
+
+    Task<Policy?> UpdatePolicyPhoneV2Async(string policyNumber, string telephone);
 }

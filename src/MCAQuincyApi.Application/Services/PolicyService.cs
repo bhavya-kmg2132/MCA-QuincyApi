@@ -132,6 +132,93 @@ public class PolicyService : IPolicyService
         var responseBody = await response.Content.ReadAsStringAsync();
         return MapPolicyInfoResponseToPolicy(responseBody);
     }
+
+    public async Task<IEnumerable<Policy>> GetPolicyQuotesV2Async(string? insuredName, string? agentCode, string? policyNumber, int? limit = null)
+    {
+        _logger.LogInformation(
+            "Calling external API: POST {BaseUrl}/api/v2/policy/quotes. InsuredName={InsuredName}, AgentCode={AgentCode}, PolicyNumber={PolicyNumber}, Limit={Limit}",
+            _baseUrl, insuredName, agentCode, policyNumber, limit);
+
+        var requestBody = new { PolicyNumber = policyNumber, insuredName, agentCode, limit };
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/quotes") { Content = content };
+        AddApiKeyHeader(request);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning(
+                "External API returned 404 for POST /api/v2/policy/quotes. InsuredName={InsuredName}, AgentCode={AgentCode}, PolicyNumber={PolicyNumber}",
+                insuredName, agentCode, policyNumber);
+            return new List<Policy>();
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "External API returned {StatusCode} for POST /api/v2/policy/quotes. Response: {ErrorBody}",
+                (int)response.StatusCode, errorBody);
+            response.EnsureSuccessStatusCode();
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        return MapApiResponseToPolicies(responseBody);
+    }
+
+    public async Task<Policy?> GetPolicyByNumberV2Async(string policyNumber)
+    {
+        _logger.LogInformation(
+            "Calling external API: GET {BaseUrl}/api/v2/Policy/{PolicyNumber}",
+            _baseUrl, policyNumber);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}api/v2/Policy/{policyNumber}");
+        AddApiKeyHeader(request);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning("Policy {PolicyNumber} not found in external API v2.", policyNumber);
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        return MapPolicyInfoResponseToPolicy(responseBody);
+    }
+
+    public async Task<Policy?> UpdatePolicyPhoneV2Async(string policyNumber, string telephone)
+    {
+        _logger.LogInformation(
+            "Calling external API: POST {BaseUrl}/api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}",
+            _baseUrl, policyNumber);
+
+        var requestBody = new { telephone, policyNumber };
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/SavePolicyInfo") { Content = content };
+        AddApiKeyHeader(request);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "External API returned {StatusCode} for POST /api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}, Response: {ErrorBody}",
+                (int)response.StatusCode, policyNumber, errorBody);
+            response.EnsureSuccessStatusCode();
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        return MapPolicyInfoResponseToPolicy(responseBody);
+    }
      private class PolicyApiResponses
     {
         [JsonPropertyName("result")]
@@ -176,6 +263,12 @@ public class PolicyService : IPolicyService
     {
         var policies = new List<Policy>();
         if (string.IsNullOrWhiteSpace(responseJson)) return policies;
+
+        var v2Wrapped = DeserializeOrDefault<ExternalApiResponse<List<ApiPolicyDtos>>>(responseJson);
+        if (v2Wrapped?.Data != null)
+        {
+            return MapPoliciesFromList(v2Wrapped.Data);
+        }
 
         var wrapped = DeserializeOrDefault<PolicyApiResponses>(responseJson);
         if (wrapped?.Result != null)
@@ -236,16 +329,29 @@ public class PolicyService : IPolicyService
         {
             ApiPolicyDto? policyDto = null;
 
+            var v2ObjectWrapped = DeserializeOrDefault<ExternalApiResponse<ApiPolicyDto>>(responseJson);
+            if (v2ObjectWrapped?.Data != null && HasPolicyData(v2ObjectWrapped.Data))
+            {
+                policyDto = v2ObjectWrapped.Data;
+            }
+
+            if (policyDto == null)
+            {
+                var v2ListWrapped = DeserializeOrDefault<ExternalApiResponse<List<ApiPolicyDto>>>(responseJson);
+                policyDto = v2ListWrapped?.Data?.FirstOrDefault();
+            }
+
             // Try deserializing as direct object first
-            var directObject = JsonSerializer.Deserialize<ApiPolicyDto>(responseJson, _jsonOptions);
-            if (directObject != null && HasPolicyData(directObject))
+            var directObject = DeserializeOrDefault<ApiPolicyDto>(responseJson);
+            if (policyDto == null && directObject != null && HasPolicyData(directObject))
             {
                 policyDto = directObject;
             }
-            else
+
+            if (policyDto == null)
             {
                 // If that fails, try wrapped in "result" array
-                var wrapped = JsonSerializer.Deserialize<PolicyInfoResponse>(responseJson, _jsonOptions);
+                var wrapped = DeserializeOrDefault<PolicyInfoResponse>(responseJson);
                 policyDto = wrapped?.Result?.FirstOrDefault();
             }
 
@@ -431,6 +537,27 @@ public class PolicyService : IPolicyService
     {
         [JsonPropertyName("result")]
         public List<ApiPolicyDto>? Result { get; set; }
+    }
+
+    private class ExternalApiResponse<T>
+    {
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+
+        [JsonPropertyName("message")]
+        public string? Message { get; set; }
+
+        [JsonPropertyName("errorCode")]
+        public string? ErrorCode { get; set; }
+
+        [JsonPropertyName("durationMs")]
+        public long? DurationMs { get; set; }
+
+        [JsonPropertyName("count")]
+        public int? Count { get; set; }
+
+        [JsonPropertyName("data")]
+        public T? Data { get; set; }
     }
 
     // Reuse the same rich DTO for both endpoints since the API
