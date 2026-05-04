@@ -138,20 +138,34 @@ public class PolicyService : IPolicyService
     }
     private class ApiPolicyDtos
     {
-        public int QUOTEID { get; set; }
+        [JsonPropertyName("quoteid")]
+        public object? QUOTEID { get; set; }
+        [JsonPropertyName("policynumber")]
         public string? POLICYNUMBER { get; set; }
+        [JsonPropertyName("insuredname")]
         public string? INSUREDNAME { get; set; }
+        [JsonPropertyName("lineofbusiness")]
         public string? LINEOFBUSINESS { get; set; }
-        public int EFFECTIVEDATE { get; set; }
-        public int EXPIRATIONDATE { get; set; }
+        [JsonPropertyName("effectivedate")]
+        public object? EFFECTIVEDATE { get; set; }
+        [JsonPropertyName("expirationdate")]
+        public object? EXPIRATIONDATE { get; set; }
+        [JsonPropertyName("status")]
         public string? STATUS { get; set; }
-        public decimal PREMIUM { get; set; }
+        [JsonPropertyName("premium")]
+        public object? PREMIUM { get; set; }
+        [JsonPropertyName("agentcode")]
         public string? AGENTCODE { get; set; }
-        public int TRANSDATE { get; set; }
-        public int ENDORSEDATE { get; set; }
+        [JsonPropertyName("transdate")]
+        public object? TRANSDATE { get; set; }
+        [JsonPropertyName("endorsedate")]
+        public object? ENDORSEDATE { get; set; }
+        [JsonPropertyName("transactiontype")]
         public string? TRANSACTIONTYPE { get; set; }
+        [JsonPropertyName("heldby")]
         public string? HELDBY { get; set; }
     }
+
 
     // ──────────────────────────────────────────────────────────────
     //  Mapping — flat list response (GetQuotes / UpdatePhone)
@@ -159,26 +173,52 @@ public class PolicyService : IPolicyService
 
     private List<Policy> MapApiResponseToPolicies(string responseJson)
     {
-        var apiResponse = JsonSerializer.Deserialize<PolicyApiResponses>(responseJson, _jsonOptions);
         var policies = new List<Policy>();
-        if (apiResponse?.Result == null) return policies;
+        if (string.IsNullOrWhiteSpace(responseJson)) return policies;
 
-        foreach (var item in apiResponse.Result)
+        try
+        {
+            // Try deserializing as direct array first
+            var directArray = JsonSerializer.Deserialize<List<ApiPolicyDtos>>(responseJson, _jsonOptions);
+            if (directArray != null)
+            {
+                return MapPoliciesFromList(directArray);
+            }
+
+            // If that fails, try wrapped in "result" property
+            var wrapped = JsonSerializer.Deserialize<PolicyApiResponses>(responseJson, _jsonOptions);
+            if (wrapped?.Result != null)
+            {
+                return MapPoliciesFromList(wrapped.Result);
+            }
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize policy response. Response: {Response}", responseJson.Substring(0, Math.Min(500, responseJson.Length)));
+        }
+
+        return policies;
+    }
+
+    private List<Policy> MapPoliciesFromList(List<ApiPolicyDtos> items)
+    {
+        var policies = new List<Policy>();
+        foreach (var item in items)
         {
             policies.Add(new Policy
             {
-                QuoteId = item.QUOTEID.ToString(),
+                QuoteId = ConvertToString(item.QUOTEID) ?? string.Empty,
                 PolicyId = item.POLICYNUMBER?.Trim() ?? string.Empty,
                 PolicyNo = item.POLICYNUMBER?.Trim(),
                 InsuredName = item.INSUREDNAME?.Trim() ?? string.Empty,
                 LineOfBusiness = item.LINEOFBUSINESS?.Trim(),
-                EffectiveDate = ParseApiDate(item.EFFECTIVEDATE),
-                ExpirationDate = ParseApiDate(item.EXPIRATIONDATE),
+                EffectiveDate = ParseStringDate(ConvertToString(item.EFFECTIVEDATE)),
+                ExpirationDate = ParseStringDate(ConvertToString(item.EXPIRATIONDATE)),
                 Status = item.STATUS?.Trim(),
-                TotalPremium = item.PREMIUM,
+                TotalPremium = ParseDecimal(ConvertToString(item.PREMIUM)),
                 AgentCode = item.AGENTCODE?.Trim(),
-                TransactionDate = ParseApiDate(item.TRANSDATE),
-                EndorseDate = ParseApiDate(item.ENDORSEDATE),
+                TransactionDate = ParseStringDate(ConvertToString(item.TRANSDATE)),
+                EndorseDate = ParseStringDate(ConvertToString(item.ENDORSEDATE)),
                 TransactionType = item.TRANSACTIONTYPE?.Trim(),
                 HeldBy = item.HELDBY?.Trim()
             });
@@ -299,7 +339,31 @@ public class PolicyService : IPolicyService
             ? dt : null;
     }
 
-    private static decimal? ParseDecimal(decimal? value) => value;
+    private static DateTime? ParseStringDate(string? dateStr)
+    {
+        if (string.IsNullOrWhiteSpace(dateStr)) return null;
+        var trimmed = dateStr.Trim();
+        if (trimmed.Length == 8 && DateTime.TryParseExact(trimmed, "yyyyMMdd", null, DateTimeStyles.None, out var dt))
+            return dt;
+        return null;
+    }
+
+    private static string? ConvertToString(object? value)
+    {
+        if (value == null) return null;
+        if (value is string str) return str;
+        if (value is int intVal) return intVal.ToString();
+        if (value is long longVal) return longVal.ToString();
+        if (value is decimal decVal) return decVal.ToString();
+        if (value is double doubleVal) return doubleVal.ToString();
+        return value.ToString();
+    }
+
+    private static decimal? ParseDecimal(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        return decimal.TryParse(value.Trim(), out var result) ? result : null;
+    }
 
     // ──────────────────────────────────────────────────────────────
     //  DTOs — flat list response  (GetQuotes)
