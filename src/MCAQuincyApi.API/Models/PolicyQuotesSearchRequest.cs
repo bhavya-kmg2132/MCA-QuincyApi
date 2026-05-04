@@ -6,7 +6,7 @@ namespace MCAQuincyApi.API.Models;
 /// </summary>
 public class PolicyQuotesSearchRequest
 {
-    public string? PolicyNumber { get; set; }
+    public string? policyNumber { get; set; }
     public string? quoteNumber { get; set; }
     public string? insuredName { get; set; }
     public string? agentCode { get; set; }

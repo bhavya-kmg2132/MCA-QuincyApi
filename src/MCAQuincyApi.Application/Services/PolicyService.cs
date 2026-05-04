@@ -45,13 +45,13 @@ public class PolicyService : IPolicyService
     // ──────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public async Task<IEnumerable<Policy>> GetPolicyQuotesAsync( string? insuredName, string? agentCode, string? quoteNumber, int? limit = null)
+    public async Task<IEnumerable<Policy>> GetPolicyQuotesAsync( string? insuredName, string? agentCode, string? policyNumber, int? limit = null)
     {
         _logger.LogInformation(
             "Calling external API: POST {BaseUrl}/api/v2/policy/quotes. InsuredName={InsuredName}, AgentCode={AgentCode}, QuoteNumber={QuoteNumber}, Limit={Limit}",
-            _baseUrl, insuredName, agentCode, quoteNumber, limit);
+            _baseUrl, insuredName, agentCode, policyNumber, limit);
 
-        var requestBody = new { quoteNumber, insuredName, agentCode, limit };
+        var requestBody = new { policyNumber, insuredName, agentCode, limit };
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -63,7 +63,7 @@ public class PolicyService : IPolicyService
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             _logger.LogWarning(
-                "External API returned 404 for POST /api/v2/policy/quotes. InsuredName={InsuredName}, AgentCode={AgentCode}, QuoteNumber={QuoteNumber}", insuredName, agentCode, quoteNumber);
+                "External API returned 404 for POST /api/v2/policy/quotes. InsuredName={InsuredName}, AgentCode={AgentCode}, QuoteNumber={QuoteNumber}", insuredName, agentCode, policyNumber);
             return new List<Policy>();
         }
 
@@ -105,7 +105,7 @@ public class PolicyService : IPolicyService
     }
 
     /// <inheritdoc />
-    public async Task<bool> UpdatePolicyPhoneAsync(string policyNumber, string telephone)
+    public async Task<Policy?> UpdatePolicyPhoneAsync(string policyNumber, string telephone)
     {
         _logger.LogInformation(
             "Calling external API: POST {BaseUrl}/api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}",
@@ -129,7 +129,8 @@ public class PolicyService : IPolicyService
             response.EnsureSuccessStatusCode();
         }
 
-        return response.IsSuccessStatusCode;
+        var responseBody = await response.Content.ReadAsStringAsync();
+        return MapPolicyInfoResponseToPolicy(responseBody);
     }
      private class PolicyApiResponses
     {
@@ -176,27 +177,19 @@ public class PolicyService : IPolicyService
         var policies = new List<Policy>();
         if (string.IsNullOrWhiteSpace(responseJson)) return policies;
 
-        try
+        var wrapped = DeserializeOrDefault<PolicyApiResponses>(responseJson);
+        if (wrapped?.Result != null)
         {
-            // Try deserializing as direct array first
-            var directArray = JsonSerializer.Deserialize<List<ApiPolicyDtos>>(responseJson, _jsonOptions);
-            if (directArray != null)
-            {
-                return MapPoliciesFromList(directArray);
-            }
-
-            // If that fails, try wrapped in "result" property
-            var wrapped = JsonSerializer.Deserialize<PolicyApiResponses>(responseJson, _jsonOptions);
-            if (wrapped?.Result != null)
-            {
-                return MapPoliciesFromList(wrapped.Result);
-            }
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to deserialize policy response. Response: {Response}", responseJson.Substring(0, Math.Min(500, responseJson.Length)));
+            return MapPoliciesFromList(wrapped.Result);
         }
 
+        var directArray = DeserializeOrDefault<List<ApiPolicyDtos>>(responseJson);
+        if (directArray != null)
+        {
+            return MapPoliciesFromList(directArray);
+        }
+
+        _logger.LogWarning("No policies found in response. Response: {Response}", responseJson.Substring(0, Math.Min(500, responseJson.Length)));
         return policies;
     }
 
@@ -212,13 +205,13 @@ public class PolicyService : IPolicyService
                 PolicyNo = item.POLICYNUMBER?.Trim(),
                 InsuredName = item.INSUREDNAME?.Trim() ?? string.Empty,
                 LineOfBusiness = item.LINEOFBUSINESS?.Trim(),
-                EffectiveDate = ParseStringDate(ConvertToString(item.EFFECTIVEDATE)),
-                ExpirationDate = ParseStringDate(ConvertToString(item.EXPIRATIONDATE)),
+                EffectiveDate = ParsePolicyDate(item.EFFECTIVEDATE),
+                ExpirationDate = ParsePolicyDate(item.EXPIRATIONDATE),
                 Status = item.STATUS?.Trim(),
                 TotalPremium = ParseDecimal(ConvertToString(item.PREMIUM)),
                 AgentCode = item.AGENTCODE?.Trim(),
-                TransactionDate = ParseStringDate(ConvertToString(item.TRANSDATE)),
-                EndorseDate = ParseStringDate(ConvertToString(item.ENDORSEDATE)),
+                TransactionDate = ParsePolicyDate(item.TRANSDATE),
+                EndorseDate = ParsePolicyDate(item.ENDORSEDATE),
                 TransactionType = item.TRANSACTIONTYPE?.Trim(),
                 HeldBy = item.HELDBY?.Trim()
             });
@@ -245,7 +238,7 @@ public class PolicyService : IPolicyService
 
             // Try deserializing as direct object first
             var directObject = JsonSerializer.Deserialize<ApiPolicyDto>(responseJson, _jsonOptions);
-            if (directObject != null)
+            if (directObject != null && HasPolicyData(directObject))
             {
                 policyDto = directObject;
             }
@@ -268,8 +261,8 @@ public class PolicyService : IPolicyService
             var policy = new Policy
             {
                 // ── Identity ──
-                PolicyId          = Convert.ToString(policyDto.PolicyId) ?? string.Empty,
-                PolicyIdOriginal  = Convert.ToString(policyDto.PolicyId),
+                PolicyId          = ConvertToString(policyDto.PolicyId) ?? string.Empty,
+                PolicyIdOriginal  = ConvertToString(policyDto.PolicyId),
                 PolicyNo          = policyDto.PolicyNumber?.Trim(),
                 QuoteNumber       = policyDto.QuoteNumber?.Trim(),
                 TransactionCode   = policyDto.TransactionCode?.Trim(),
@@ -284,10 +277,10 @@ public class PolicyService : IPolicyService
                 ContactName        = policyDto.Insured?.NamedInsured?.Trim(),
 
                 // ── Term ──
-                EffectiveDate        = ParseDateTime(policyDto.Term?.EffectiveDate),
-                ExpirationDate       = ParseDateTime(policyDto.Term?.ExpirationDate),
-                PolicyEffectiveDate  = ParseDateTime(policyDto.Term?.EffectiveDate),
-                PolicyExpirationDate = ParseDateTime(policyDto.Term?.ExpirationDate),
+                EffectiveDate        = ParsePolicyDate(policyDto.Term?.EffectiveDate),
+                ExpirationDate       = ParsePolicyDate(policyDto.Term?.ExpirationDate),
+                PolicyEffectiveDate  = ParsePolicyDate(policyDto.Term?.EffectiveDate),
+                PolicyExpirationDate = ParsePolicyDate(policyDto.Term?.ExpirationDate),
 
                 // ── Contact ──
                 PhoneNumber = primaryPhone?.PhoneNumber,
@@ -335,6 +328,47 @@ public class PolicyService : IPolicyService
     private static string? FormatBool(bool? value)
         => value.HasValue ? (value.Value ? "Y" : "N") : null;
 
+    private static bool HasPolicyData(ApiPolicyDto policyDto)
+        => policyDto.PolicyId != null
+           || !string.IsNullOrWhiteSpace(policyDto.PolicyNumber)
+           || !string.IsNullOrWhiteSpace(policyDto.QuoteNumber);
+
+    private T? DeserializeOrDefault<T>(string responseJson)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<T>(responseJson, _jsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogDebug(ex, "Response did not match {ResponseType}.", typeof(T).Name);
+            return default;
+        }
+    }
+
+    private static DateTime? ParsePolicyDate(object? value)
+    {
+        var dateStr = ConvertToString(value);
+        if (string.IsNullOrWhiteSpace(dateStr)) return null;
+
+        var trimmed = dateStr.Trim();
+        string[] formats =
+        [
+            "yyyyMMdd",
+            "yyyy-MM-dd",
+            "yyyy-MM-ddTHH:mm:ss",
+            "yyyy-MM-ddTHH:mm:ss.FFFFFFFK",
+            "MM/dd/yyyy",
+            "M/d/yyyy"
+        ];
+
+        return DateTime.TryParseExact(trimmed, formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var exactDate)
+            ? exactDate
+            : DateTime.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedDate)
+                ? parsedDate
+                : null;
+    }
+
     private static DateTime? ParseDateTime(string? dateStr)
     {
         if (string.IsNullOrWhiteSpace(dateStr)) return null;
@@ -363,6 +397,18 @@ public class PolicyService : IPolicyService
     private static string? ConvertToString(object? value)
     {
         if (value == null) return null;
+        if (value is JsonElement jsonElement)
+        {
+            return jsonElement.ValueKind switch
+            {
+                JsonValueKind.String => jsonElement.GetString(),
+                JsonValueKind.Number => jsonElement.GetRawText(),
+                JsonValueKind.True => bool.TrueString,
+                JsonValueKind.False => bool.FalseString,
+                JsonValueKind.Null => null,
+                _ => jsonElement.ToString()
+            };
+        }
         if (value is string str) return str;
         if (value is int intVal) return intVal.ToString();
         if (value is long longVal) return longVal.ToString();
@@ -392,7 +438,7 @@ public class PolicyService : IPolicyService
     private class ApiPolicyDto
     {
         [JsonPropertyName("POLICYID")]
-        public int? PolicyId { get; set; }
+        public object? PolicyId { get; set; }
 
         [JsonPropertyName("POLICYNUMBER")]
         public string? PolicyNumber { get; set; }
@@ -443,7 +489,7 @@ public class PolicyService : IPolicyService
         public QuestionnaireInfo? Questionnaire { get; set; }
 
         [JsonPropertyName("MESSAGES")]
-        public string? Messages { get; set; }
+        public object? Messages { get; set; }
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -463,10 +509,10 @@ public class PolicyService : IPolicyService
     private class TermInfo
     {
         [JsonPropertyName("EFFECTIVEDATE")]
-        public string? EffectiveDate { get; set; }
+        public object? EffectiveDate { get; set; }
 
         [JsonPropertyName("EXPIRATIONDATE")]
-        public string? ExpirationDate { get; set; }
+        public object? ExpirationDate { get; set; }
     }
 
     private class InsuredInfo
@@ -502,7 +548,7 @@ public class PolicyService : IPolicyService
         public string? PhoneNumber { get; set; }
 
         [JsonPropertyName("ISPRIMARY")]
-        public string? IsPrimary { get; set; }
+        public object? IsPrimary { get; set; }
     }
 
     private class AddressInfo
@@ -616,7 +662,7 @@ public class PolicyService : IPolicyService
         public string? LicenseClass { get; set; }
 
         [JsonPropertyName("SDIPSTEP")]
-        public string? SdipStep { get; set; }
+        public object? SdipStep { get; set; }
 
         [JsonPropertyName("ASSIGNEDVEHICLEIDS")]
         public List<string>? AssignedVehicleIds { get; set; }

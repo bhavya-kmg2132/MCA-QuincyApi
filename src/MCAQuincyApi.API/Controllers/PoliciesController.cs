@@ -28,9 +28,9 @@ public class PoliciesController : ControllerBase
         var result = await _policyService.GetPolicyQuotesAsync(
             request?.insuredName,
             request?.agentCode,
-            request?.quoteNumber,
+            request?.policyNumber,
             request?.limit
-           );
+           );   
         return Ok(result);
     }
 

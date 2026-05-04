@@ -10,7 +10,7 @@ public interface IPolicyService
     /// Search policy quotes via the external API.
     /// POST /api/v2/policy/quotes
     /// </summary>
-    Task<IEnumerable<Policy>> GetPolicyQuotesAsync( string? insuredName, string? agentCode, string? quoteNumber, int? limit = null);
+    Task<IEnumerable<Policy>> GetPolicyQuotesAsync( string? insuredName, string? agentCode, string? policyNumber, int? limit = null);
 
     /// <summary>
     /// Get policy details by policy number from the external API.
@@ -22,5 +22,5 @@ public interface IPolicyService
     /// Update the phone number for a policy via the external API.
     /// POST /api/v2/policy/SavePolicyInfo
     /// </summary>
-    Task<bool> UpdatePolicyPhoneAsync(string policyNumber, string telephone);
+    Task<Policy?> UpdatePolicyPhoneAsync(string policyNumber, string telephone);
 }
