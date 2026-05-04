@@ -87,7 +87,7 @@ public class PolicyService : IPolicyService
             "Calling external API: GET {BaseUrl}/api/Policy/{PolicyNumber}",
             _baseUrl, policyNumber);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}api/Policy/{Uri.EscapeDataString(policyNumber)}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}api/Policy/{policyNumber}");
         AddApiKeyHeader(request);
 
         var response = await _httpClient.SendAsync(request);
@@ -241,8 +241,20 @@ public class PolicyService : IPolicyService
 
         try
         {
-            var apiResponse = JsonSerializer.Deserialize<PolicyInfoResponse>(responseJson, _jsonOptions);
-            var policyDto = apiResponse?.Result?.FirstOrDefault();
+            ApiPolicyDto? policyDto = null;
+
+            // Try deserializing as direct object first
+            var directObject = JsonSerializer.Deserialize<ApiPolicyDto>(responseJson, _jsonOptions);
+            if (directObject != null)
+            {
+                policyDto = directObject;
+            }
+            else
+            {
+                // If that fails, try wrapped in "result" array
+                var wrapped = JsonSerializer.Deserialize<PolicyInfoResponse>(responseJson, _jsonOptions);
+                policyDto = wrapped?.Result?.FirstOrDefault();
+            }
 
             if (policyDto == null)
             {
@@ -311,7 +323,7 @@ public class PolicyService : IPolicyService
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Failed to deserialize policy response");
+            _logger.LogError(ex, "Failed to deserialize policy response. Response: {Response}", responseJson.Substring(0, Math.Min(500, responseJson.Length)));
             return null;
         }
     }

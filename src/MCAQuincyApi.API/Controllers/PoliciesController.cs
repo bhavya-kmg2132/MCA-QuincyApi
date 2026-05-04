@@ -21,7 +21,7 @@ public class PoliciesController : ControllerBase
     /// Search policy quotes.
     /// Proxies to: POST http://10.1.16.145:8020/api/v2/policy/quotes
     /// </summary>
-    [HttpPost("GetQuotes")]
+    [HttpPost("quotes")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetQuotes([FromBody] PolicyQuotesSearchRequest? request)
     {
