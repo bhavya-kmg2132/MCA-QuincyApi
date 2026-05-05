@@ -143,7 +143,7 @@ public class PolicyService : IPolicyService
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/quotes") { Content = content };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/Quotes") { Content = content };
         AddApiKeyHeader(request);
 
         var response = await _httpClient.SendAsync(request);
@@ -175,7 +175,7 @@ public class PolicyService : IPolicyService
             "Calling external API: GET {BaseUrl}/api/v2/Policy/{PolicyNumber}",
             _baseUrl, policyNumber);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}api/v2/Policy/{policyNumber}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}api/v2/policy/{policyNumber}");
         AddApiKeyHeader(request);
 
         var response = await _httpClient.SendAsync(request);
@@ -551,7 +551,7 @@ public class PolicyService : IPolicyService
         public string? ErrorCode { get; set; }
 
         [JsonPropertyName("durationMs")]
-        public long? DurationMs { get; set; }
+        public string? DurationMs { get; set; }
 
         [JsonPropertyName("count")]
         public int? Count { get; set; }
