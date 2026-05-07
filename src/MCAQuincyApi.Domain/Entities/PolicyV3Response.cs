@@ -14,7 +14,8 @@ public class PolicyV3Envelope
     public string? ErrorCode { get; set; }
 
     [JsonPropertyName("durationMs")]
-    public long? DurationMs { get; set; }
+    [JsonConverter(typeof(FlexibleStringConverter))]
+    public string? DurationMs { get; set; }
 
     [JsonPropertyName("count")]
     public int? Count { get; set; }
@@ -35,7 +36,8 @@ public class PolicyV3ListEnvelope
     public string? ErrorCode { get; set; }
 
     [JsonPropertyName("durationMs")]
-    public long? DurationMs { get; set; }
+    [JsonConverter(typeof(FlexibleStringConverter))]
+    public string? DurationMs { get; set; }
 
     [JsonPropertyName("count")]
     public int? Count { get; set; }
@@ -47,6 +49,7 @@ public class PolicyV3ListEnvelope
 public class PolicyV3Response
 {
     [JsonPropertyName("policyId")]
+    [JsonConverter(typeof(FlexibleStringConverter))]
     public string? PolicyId { get; set; }
 
     [JsonPropertyName("policyNumber")]
@@ -110,9 +113,11 @@ public class PolicyV3Response
 public class PolicyV3Term
 {
     [JsonPropertyName("effectiveDate")]
+    [JsonConverter(typeof(FlexibleStringConverter))]
     public string? EffectiveDate { get; set; }
 
     [JsonPropertyName("expirationDate")]
+    [JsonConverter(typeof(FlexibleStringConverter))]
     public string? ExpirationDate { get; set; }
 }
 
@@ -149,7 +154,8 @@ public class PolicyV3Phone
     public string? PhoneNumber { get; set; }
 
     [JsonPropertyName("isPrimary")]
-    public bool? IsPrimary { get; set; }
+    [JsonConverter(typeof(FlexibleStringConverter))]
+    public string? IsPrimary { get; set; }
 }
 
 public class PolicyV3Address
