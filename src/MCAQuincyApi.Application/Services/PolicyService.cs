@@ -18,6 +18,7 @@ public class PolicyService : IPolicyService
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
+    private readonly string _baseUrlV3;
     private readonly string _apiKey;
     private readonly ILogger<PolicyService> _logger;
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -31,6 +32,8 @@ public class PolicyService : IPolicyService
         _logger = logger;
         _baseUrl = configuration["ExternalApi:BaseUrl"]
             ?? throw new InvalidOperationException("Missing ExternalApi:BaseUrl configuration.");
+        _baseUrlV3 = configuration["ExternalApi:BaseUrlV3"]
+            ?? throw new InvalidOperationException("Missing ExternalApi:BaseUrlV3 configuration.");
         _apiKey = configuration["ExternalApi:ApiKey"]
             ?? throw new InvalidOperationException("Missing ExternalApi:ApiKey configuration.");
     }
@@ -219,6 +222,42 @@ public class PolicyService : IPolicyService
         var responseBody = await response.Content.ReadAsStringAsync();
         return MapPolicyInfoResponseToPolicy(responseBody);
     }
+
+    public async Task<PolicyV3Response?> GetPolicyByNumberV3Async(string policyNumber)
+    {
+        _logger.LogInformation(
+            "Calling external API: GET {BaseUrl}/api/v3/Policy/{PolicyNumber}",
+            _baseUrlV3, policyNumber);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrlV3}api/v3/Policy/{policyNumber}");
+        AddApiKeyHeader(request);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning("Policy {PolicyNumber} not found in external API v3.", policyNumber);
+            return null;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "External API returned {StatusCode} for GET /api/v3/Policy/{PolicyNumber}. Response: {ErrorBody}",
+                (int)response.StatusCode, policyNumber, errorBody);
+            response.EnsureSuccessStatusCode();
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return null;
+        }
+
+        return MapPolicyV3Response(responseBody);
+    }
+
      private class PolicyApiResponses
     {
         [JsonPropertyName("result")]
@@ -427,6 +466,60 @@ public class PolicyService : IPolicyService
         }
     }
 
+    private PolicyV3Response? MapPolicyV3Response(string responseJson)
+    {
+        if (string.IsNullOrWhiteSpace(responseJson))
+        {
+            _logger.LogWarning("Empty response received for policy v3 lookup");
+            return null;
+        }
+
+        try
+        {
+            PolicyV3Response? policy = null;
+
+            var wrappedObject = DeserializeOrDefault<PolicyV3Envelope>(responseJson);
+            if (wrappedObject?.Data != null && HasPolicyV3Data(wrappedObject.Data))
+            {
+                policy = wrappedObject.Data;
+            }
+
+            if (policy == null)
+            {
+                var wrappedList = DeserializeOrDefault<PolicyV3ListEnvelope>(responseJson);
+                policy = wrappedList?.Data?.FirstOrDefault(HasPolicyV3Data);
+            }
+
+            if (policy == null)
+            {
+                var directObject = DeserializeOrDefault<PolicyV3Response>(responseJson);
+                if (directObject != null && HasPolicyV3Data(directObject))
+                {
+                    policy = directObject;
+                }
+            }
+
+            // if (policy == null)
+            // {
+            //     var wrappedResult = DeserializeOrDefault<PolicyV3ResultResponse>(responseJson);
+            //     policy = wrappedResult?.Result?.FirstOrDefault(HasPolicyV3Data);
+            // }
+
+            if (policy == null)
+            {
+                _logger.LogWarning("No policy v3 data found in response");
+                return null;
+            }
+
+            return policy;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize policy v3 response. Response: {Response}", responseJson.Substring(0, Math.Min(500, responseJson.Length)));
+            return null;
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  Helpers
     // ──────────────────────────────────────────────────────────────
@@ -438,6 +531,11 @@ public class PolicyService : IPolicyService
         => policyDto.PolicyId != null
            || !string.IsNullOrWhiteSpace(policyDto.PolicyNumber)
            || !string.IsNullOrWhiteSpace(policyDto.QuoteNumber);
+
+    private static bool HasPolicyV3Data(PolicyV3Response policy)
+        => !string.IsNullOrWhiteSpace(policy.PolicyId)
+           || !string.IsNullOrWhiteSpace(policy.PolicyNumber)
+           || !string.IsNullOrWhiteSpace(policy.QuoteNumber);
 
     private T? DeserializeOrDefault<T>(string responseJson)
     {
@@ -607,7 +705,10 @@ public class PolicyService : IPolicyService
         public List<DriverInfo>? Drivers { get; set; }
 
         [JsonPropertyName("COVERAGES")]
-        public List<object>? Coverages { get; set; }
+        public List<CoverageInfo>? Coverages { get; set; }
+
+        [JsonPropertyName("COVERAGEINDICATORS")]
+        public CoverageIndicatorsInfo? CoverageIndicators { get; set; }
 
         [JsonPropertyName("RATING")]
         public RatingInfo? Rating { get; set; }
@@ -615,8 +716,11 @@ public class PolicyService : IPolicyService
         [JsonPropertyName("QUESTIONNAIRE")]
         public QuestionnaireInfo? Questionnaire { get; set; }
 
+        [JsonPropertyName("UNDERWRITERQUESTIONS")]
+        public UnderwriterQuestionsInfo? UnderwriterQuestions { get; set; }
+
         [JsonPropertyName("MESSAGES")]
-        public object? Messages { get; set; }
+        public List<object>? Messages { get; set; }
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -744,10 +848,22 @@ public class PolicyService : IPolicyService
         public string? Radius { get; set; }
 
         [JsonPropertyName("COVERAGES")]
-        public object? Coverages { get; set; }
+        public List<CoverageInfo>? Coverages { get; set; }
 
         [JsonPropertyName("LOSSPAYEES")]
         public object? LossPayees { get; set; }
+    }
+
+    private class CoverageInfo
+    {
+        [JsonPropertyName("CODE")]
+        public string? Code { get; set; }
+
+        [JsonPropertyName("LIMIT")]
+        public string? Limit { get; set; }
+
+        [JsonPropertyName("DEDUCTIBLE")]
+        public decimal? Deductible { get; set; }
     }
 
     private class GaragingInfo
@@ -829,5 +945,35 @@ public class PolicyService : IPolicyService
 
         [JsonPropertyName("SUPPLEMENTALSTATUS")]
         public string? SupplementalStatus { get; set; }
+    }
+
+    private class CoverageIndicatorsInfo
+    {
+        [JsonPropertyName("NONOWNEDAUTO")]
+        public string? NonOwnedAuto { get; set; }
+
+        [JsonPropertyName("HIREDAUTO")]
+        public string? HiredAuto { get; set; }
+
+        [JsonPropertyName("DRIVEOTHERCAR")]
+        public string? DriveOtherCar { get; set; }
+
+        [JsonPropertyName("FLEETSTATUS")]
+        public string? FleetStatus { get; set; }
+    }
+
+    private class UnderwriterQuestionsInfo
+    {
+        [JsonPropertyName("HAZARDOUSMATERIALSTRANSPORT")]
+        public string? HazardousMaterialsTransport { get; set; }
+
+        [JsonPropertyName("VALIDFEINFID")]
+        public string? ValidFeinFid { get; set; }
+
+        [JsonPropertyName("SNOWREMOVALFORFEE")]
+        public string? SnowRemovalForFee { get; set; }
+
+        [JsonPropertyName("ICCPUCFILINGS")]
+        public string? IccPucFilings { get; set; }
     }
 }
