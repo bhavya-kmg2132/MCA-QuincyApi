@@ -258,6 +258,41 @@ public class PolicyService : IPolicyService
         return MapPolicyV3Response(responseBody);
     }
 
+    public async Task<PolicyV3Response?> UpdatePolicyInfoV3Async(PolicyV3UpdateRequest requestModel)
+    {
+        _logger.LogInformation(
+            "Calling external API: POST {BaseUrl}/api/v3/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}",
+            _baseUrlV3, requestModel.PolicyNumber);
+
+        var json = JsonSerializer.Serialize(requestModel);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrlV3}api/v3/policy/SavePolicyInfo")
+        {
+            Content = content
+        };
+        AddApiKeyHeader(request);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "External API returned {StatusCode} for POST /api/v3/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}, Response: {ErrorBody}",
+                (int)response.StatusCode, requestModel.PolicyNumber, errorBody);
+            response.EnsureSuccessStatusCode();
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return null;
+        }
+
+        return MapPolicyV3Response(responseBody);
+    }
+
      private class PolicyApiResponses
     {
         [JsonPropertyName("result")]
