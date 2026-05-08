@@ -146,7 +146,7 @@ public class PolicyService : IPolicyService
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}api/v2/policy/quotes") { Content = content };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrlV3}api/v3/policy/quotes") { Content = content };
         AddApiKeyHeader(request);
 
         var response = await _httpClient.SendAsync(request);
