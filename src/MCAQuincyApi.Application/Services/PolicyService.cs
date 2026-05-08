@@ -274,7 +274,47 @@ public class PolicyService : IPolicyService
             "Calling external API: POST {BaseUrl}/api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}",
             _baseUrlV3, requestModel.PolicyNumber);
 
-        var json = JsonSerializer.Serialize(requestModel);
+        var requestBody = new
+        {
+            policyNumber = requestModel.PolicyNumber,
+            insured = requestModel.Insured == null
+                ? null
+                : new
+                {
+                    namedInsured = NormalizeText(requestModel.Insured.NamedInsured),
+                    businessType = NormalizeText(requestModel.Insured.BusinessType),
+                    licenseNumber = NormalizeText(requestModel.Insured.LicenseNumber)
+                },
+            telephone = NormalizeText(requestModel.Telephone),
+            email = NormalizeText(requestModel.Email),
+            mailingAddress = requestModel.MailingAddress == null
+                ? null
+                : new
+                {
+                    line1 = NormalizeText(requestModel.MailingAddress.Line1),
+                    line2 = NormalizeText(requestModel.MailingAddress.Line2),
+                    city = NormalizeText(requestModel.MailingAddress.City),
+                    state = NormalizeText(requestModel.MailingAddress.State),
+                    postalCode = NormalizeText(requestModel.MailingAddress.PostalCode),
+                    country = NormalizeText(requestModel.MailingAddress.Country)
+                },
+            coverageIndicators = new
+            {
+                nonOwnedAuto = NormalizeBooleanText(requestModel.CoverageIndicators?.NonOwnedAuto),
+                hiredAuto = NormalizeBooleanText(requestModel.CoverageIndicators?.HiredAuto),
+                driveOtherCar = NormalizeBooleanText(requestModel.CoverageIndicators?.DriveOtherCar),
+                fleetStatus = NormalizeBooleanText(requestModel.CoverageIndicators?.FleetStatus)
+            },
+            underwriterQuestions = new
+            {
+                hazardousMaterialsTransport = NormalizeBooleanText(requestModel.UnderwriterQuestions?.HazardousMaterialsTransport),
+                validFeinFid = NormalizeBooleanText(requestModel.UnderwriterQuestions?.ValidFeinFid),
+                snowRemovalForFee = NormalizeBooleanText(requestModel.UnderwriterQuestions?.SnowRemovalForFee),
+                iccPucFilings = NormalizeBooleanText(requestModel.UnderwriterQuestions?.IccPucFilings)
+            }
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrlV3}api/v2/policy/SavePolicyInfo")
@@ -290,7 +330,7 @@ public class PolicyService : IPolicyService
         {
             var errorBody = await response.Content.ReadAsStringAsync();
             _logger.LogError(
-                "External API returned {StatusCode} for POST /api/v3/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}, Response: {ErrorBody}",
+                "External API returned {StatusCode} for POST /api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}, Response: {ErrorBody}",
                 (int)response.StatusCode, requestModel.PolicyNumber, errorBody);
             response.EnsureSuccessStatusCode();
         }
@@ -582,6 +622,28 @@ public class PolicyService : IPolicyService
         => !string.IsNullOrWhiteSpace(policy.PolicyId)
            || !string.IsNullOrWhiteSpace(policy.PolicyNumber)
            || !string.IsNullOrWhiteSpace(policy.QuoteNumber);
+
+    private static string NormalizeText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+
+    private static string? NormalizeBooleanText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var normalized = value.Trim().ToUpperInvariant();
+        return normalized switch
+        {
+            "Y" => "Y",
+            "YES" => "Y",
+            "TRUE" => "Y",
+            "1" => "Y",
+            "N" => "N",
+            "NO" => "N",
+            "FALSE" => "N",
+            "0" => "N",
+            _ => null
+        };
+    }
 
     private T? DeserializeOrDefault<T>(string responseJson)
     {
