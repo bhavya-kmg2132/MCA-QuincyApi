@@ -31,4 +31,6 @@ public interface IPolicyService
     Task<Policy?> UpdatePolicyPhoneV2Async(string policyNumber, string telephone);
 
     Task<PolicyV3Response?> GetPolicyByNumberV3Async(string policyNumber);
+
+    Task<PolicyV3Response?> UpdatePolicyInfoV3Async(PolicyV3UpdateRequest request);
 }

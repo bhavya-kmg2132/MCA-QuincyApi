@@ -52,4 +52,41 @@ public class PolicyV3Controller : ControllerBase
                     stopwatch.ElapsedMilliseconds));
         }
     }
+
+    [HttpPost("SavePolicyInfo")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SavePolicyInfo([FromBody] PolicyV3Response request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        if (string.IsNullOrWhiteSpace(request.PolicyNumber))
+        {
+            return BadRequest(ApiResponse<object>.ErrorResponse(
+                "Policy number is required",
+                "INVALID_SAVE_POLICY_INFO_REQUEST",
+                stopwatch.ElapsedMilliseconds));
+        }
+
+        try
+        {
+            var updateRequest = PolicyV3UpdateRequest.FromPolicyV3Response(request);
+            var result = await _policyService.UpdatePolicyInfoV3Async(updateRequest);
+            var response = SavePolicyInfoV3Response.FromPolicyV3(result);
+            return Ok(ApiResponse<SavePolicyInfoV3Response>.SuccessResponse(
+                "Policy information updated successfully",
+                stopwatch.ElapsedMilliseconds,
+                response,
+                response == null ? 0 : 1));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ApiResponse<object>.ErrorResponse(
+                    $"Unable to update policy information. {ex.Message}",
+                    "POLICY_INFO_UPDATE_FAILED",
+                    stopwatch.ElapsedMilliseconds));
+        }
+    }
 }

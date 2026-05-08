@@ -20,6 +20,7 @@ public class PolicyService : IPolicyService
     private readonly string _baseUrl;
     private readonly string _baseUrlV3;
     private readonly string _apiKey;
+    private readonly string? _sessionToken;
     private readonly ILogger<PolicyService> _logger;
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -36,11 +37,20 @@ public class PolicyService : IPolicyService
             ?? throw new InvalidOperationException("Missing ExternalApi:BaseUrlV3 configuration.");
         _apiKey = configuration["ExternalApi:ApiKey"]
             ?? throw new InvalidOperationException("Missing ExternalApi:ApiKey configuration.");
+        _sessionToken = configuration["ExternalApi:SessionToken"];
     }
 
     private void AddApiKeyHeader(HttpRequestMessage request)
     {
         request.Headers.Add("x-api-key", _apiKey);
+    }
+
+    private void AddSessionTokenCookie(HttpRequestMessage request)
+    {
+        if (!string.IsNullOrWhiteSpace(_sessionToken))
+        {
+            request.Headers.Add("Cookie", $"session_token={_sessionToken}");
+        }
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -246,6 +256,86 @@ public class PolicyService : IPolicyService
             _logger.LogError(
                 "External API returned {StatusCode} for GET /api/v3/Policy/{PolicyNumber}. Response: {ErrorBody}",
                 (int)response.StatusCode, policyNumber, errorBody);
+            response.EnsureSuccessStatusCode();
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return null;
+        }
+
+        return MapPolicyV3Response(responseBody);
+    }
+
+    public async Task<PolicyV3Response?> UpdatePolicyInfoV3Async(PolicyV3UpdateRequest requestModel)
+    {
+        _logger.LogInformation(
+            "Calling external API: POST {BaseUrl}/api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}",
+            _baseUrlV3, requestModel.PolicyNumber);
+
+        var requestBody = new
+        {
+            policyNumber = requestModel.PolicyNumber,
+            insured = requestModel.Insured == null
+                ? null
+                : new
+                {
+                    namedInsured = requestModel.Insured.NamedInsured,
+                    businessType = requestModel.Insured.BusinessType,
+                    licenseNumber = requestModel.Insured.LicenseNumber
+                },
+            telephone = requestModel.Telephone ?? string.Empty,
+            email = requestModel.Email ?? string.Empty,
+            mailingAddress = requestModel.MailingAddress == null
+                ? null
+                : new
+                {
+                    line1 = requestModel.MailingAddress.Line1,
+                    line2 = requestModel.MailingAddress.Line2,
+                    city = requestModel.MailingAddress.City,
+                    state = requestModel.MailingAddress.State,
+                    postalCode = requestModel.MailingAddress.PostalCode,
+                    country = requestModel.MailingAddress.Country
+                },
+            coverageIndicators = requestModel.CoverageIndicators == null
+                ? null
+                : new
+                {
+                    nonOwnedAuto = requestModel.CoverageIndicators.NonOwnedAuto,
+                    hiredAuto = requestModel.CoverageIndicators.HiredAuto,
+                    driveOtherCar = requestModel.CoverageIndicators.DriveOtherCar,
+                    fleetStatus = requestModel.CoverageIndicators.FleetStatus
+                },
+            underwriterQuestions = requestModel.UnderwriterQuestions == null
+                ? null
+                : new
+                {
+                    hazardousMaterialsTransport = NormalizeBooleanText(requestModel.UnderwriterQuestions.HazardousMaterialsTransport),
+                    validFeinFid = NormalizeBooleanText(requestModel.UnderwriterQuestions.ValidFeinFid),
+                    snowRemovalForFee = NormalizeBooleanText(requestModel.UnderwriterQuestions.SnowRemovalForFee),
+                    iccPucFilings = NormalizeBooleanText(requestModel.UnderwriterQuestions.IccPucFilings)
+                }
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrlV3}api/v2/policy/SavePolicyInfo")
+        {
+            Content = content
+        };
+        AddApiKeyHeader(request);
+        AddSessionTokenCookie(request);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "External API returned {StatusCode} for POST /api/v2/policy/SavePolicyInfo. PolicyNumber={PolicyNumber}, Response: {ErrorBody}",
+                (int)response.StatusCode, requestModel.PolicyNumber, errorBody);
             response.EnsureSuccessStatusCode();
         }
 
@@ -536,6 +626,25 @@ public class PolicyService : IPolicyService
         => !string.IsNullOrWhiteSpace(policy.PolicyId)
            || !string.IsNullOrWhiteSpace(policy.PolicyNumber)
            || !string.IsNullOrWhiteSpace(policy.QuoteNumber);
+
+    private static string? NormalizeBooleanText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var normalized = value.Trim().ToUpperInvariant();
+        return normalized switch
+        {
+            "Y" => "Y",
+            "N" => "N",
+            "TRUE" => "Y",
+            "FALSE" => "N",
+            "YES" => "Y",
+            "NO" => "N",
+            "1" => "Y",
+            "0" => "N",
+            _ => normalized
+        };
+    }
 
     private T? DeserializeOrDefault<T>(string responseJson)
     {
