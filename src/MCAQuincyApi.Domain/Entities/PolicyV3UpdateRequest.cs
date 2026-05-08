@@ -31,8 +31,8 @@ public class PolicyV3UpdateRequest
         return new PolicyV3UpdateRequest
         {
             PolicyNumber = source.PolicyNumber ?? string.Empty,
-            Telephone = source.Contact?.Phones?.FirstOrDefault()?.PhoneNumber,
-            Email = source.Contact?.Email,
+            Telephone = source.Contact?.Phones?.FirstOrDefault()?.PhoneNumber?? string.Empty,
+            Email = source.Contact?.Email?? string.Empty,
             Insured = source.Insured == null
                 ? null
                 : new PolicyV3UpdateInsured
@@ -68,7 +68,7 @@ public class PolicyV3UpdateRequest
                     HazardousMaterialsTransport = source.UnderwriterQuestions.HazardousMaterialsTransport,
                     ValidFeinFid = source.UnderwriterQuestions.ValidFeinFid,
                     SnowRemovalForFee = source.UnderwriterQuestions.SnowRemovalForFee,
-                    IccPucFilings = source.UnderwriterQuestions.IccPucFilings
+                    IccPucFilings = source.UnderwriterQuestions.IccPucFilings?? null
                 }
         };
     }
