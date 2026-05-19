@@ -164,7 +164,7 @@ public class ChangePolicyController : ControllerBase
                     stopwatch.ElapsedMilliseconds));
             }
 
-            var baseUrl = "http://127.0.0.1:8000/";
+            var baseUrl = _configuration["ExternalApi:BaseUrlPY"] ?? "http://10.1.29.18/";
             var url = $"{baseUrl}api/v2/policy/RateMCAData";
 
             _logger.LogInformation("Calling external API: POST {Url}", url);
