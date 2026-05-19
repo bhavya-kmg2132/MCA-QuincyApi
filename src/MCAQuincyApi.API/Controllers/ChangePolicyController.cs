@@ -11,36 +11,36 @@ namespace MCAQuincyApi.API.Controllers;
 
 [ApiController]
 [Route("api/v2/policy")]
-public class ChnagePolicyController : ControllerBase
+public class ChangePolicyController : ControllerBase
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<ChnagePolicyController> _logger;
+    private readonly ILogger<ChangePolicyController> _logger;
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public ChnagePolicyController(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<ChnagePolicyController> logger)
+    public ChangePolicyController(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<ChangePolicyController> logger)
     {
         _httpClient = httpClientFactory.CreateClient();
         _configuration = configuration;
         _logger = logger;
     }
 
-    [HttpGet("ChangeChnagePolicy131/{policyNumber}")]
+    [HttpGet("ChangeChangePolicy131/{policyNumber}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ChangeChnagePolicy131(string policyNumber)
+    public async Task<IActionResult> ChangeChangePolicy131(string policyNumber)
     {
         var stopwatch = Stopwatch.StartNew();
         try
         {
             //var baseUrl = "http://127.0.0.1:8000/";
             var baseUrl = _configuration["ExternalApi:BaseUrlPY"] ?? "http://10.1.29.18/";
-            var url = $"{baseUrl}api/v2/policy/ChangeChnagePolicy131/{Uri.EscapeDataString(policyNumber)}";
+            var url = $"{baseUrl}api/v2/policy/ChangeChangePolicy131/{Uri.EscapeDataString(policyNumber)}";
 
             _logger.LogInformation("Calling external API: GET {Url}", url);
 
@@ -78,7 +78,7 @@ public class ChnagePolicyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling ChangeChnagePolicy131 API for policy {PolicyNumber}", policyNumber);
+            _logger.LogError(ex, "Error calling ChangeChangePolicy131 API for policy {PolicyNumber}", policyNumber);
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 ApiResponse<object>.ErrorResponse(
@@ -138,7 +138,7 @@ public class ChnagePolicyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling ChangeChnagePolicy131 API for policy {PolicyNumber}", policyNumber);
+            _logger.LogError(ex, "Error calling ChangeChangePolicy131 API for policy {PolicyNumber}", policyNumber);
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 ApiResponse<object>.ErrorResponse(
@@ -210,16 +210,16 @@ public class ChnagePolicyController : ControllerBase
     }
 }
 
-public class ChangeChnagePolicyApiResponse
+public class ChangeChangePolicyApiResponse
 {
     [JsonPropertyName("result")]
-    public ChangeChnagePolicyResult? Result { get; set; }
+    public ChangeChangePolicyResult? Result { get; set; }
 
     [JsonPropertyName("process time")]
     public string? ProcessTime { get; set; }
 }
 
-public class ChangeChnagePolicyResult
+public class ChangeChangePolicyResult
 {
     [JsonPropertyName("success")]
     public bool Success { get; set; }
@@ -234,18 +234,18 @@ public class ChangeChnagePolicyResult
     public long? DurationMs { get; set; }
 
     [JsonPropertyName("data")]
-    public List<ChangeChnagePolicyData?> Data { get; set; } = new();
+    public List<ChangeChangePolicyData?> Data { get; set; } = new();
 }
 
-public class ChangeChnagePolicyResponse
+public class ChangeChangePolicyResponse
 {
     [JsonPropertyName("data")]
-    public List<ChangeChnagePolicyData?> Data { get; set; } = new();
+    public List<ChangeChangePolicyData?> Data { get; set; } = new();
 }
 
 [JsonDerivedType(typeof(TotalPremiumData), "TOTALPREMIUM")]
 [JsonDerivedType(typeof(TableData), "tableName")]
-public class ChangeChnagePolicyData
+public class ChangeChangePolicyData
 {
     [JsonPropertyName("TOTALPREMIUM")]
     public object? TOTALPREMIUM { get; set; }
@@ -257,13 +257,13 @@ public class ChangeChnagePolicyData
     public List<Dictionary<string, object>>? TableValue { get; set; }
 }
 
-public class TotalPremiumData : ChangeChnagePolicyData
+public class TotalPremiumData : ChangeChangePolicyData
 {
     [JsonPropertyName("TOTALPREMIUM")]
     public new object? TOTALPREMIUM { get; set; }
 }
 
-public class TableData : ChangeChnagePolicyData
+public class TableData : ChangeChangePolicyData
 {
     [JsonPropertyName("tableName")]
     public new string? TableName { get; set; }
@@ -284,7 +284,7 @@ public class RateMcaDataTable
 public class RateMcaDataResponse
 {
     [JsonPropertyName("data")]
-    public List<ChangeChnagePolicyData?> Data { get; set; } = new();
+    public List<ChangeChangePolicyData?> Data { get; set; } = new();
 }
 
 public class RateMcaDataApiResponse
