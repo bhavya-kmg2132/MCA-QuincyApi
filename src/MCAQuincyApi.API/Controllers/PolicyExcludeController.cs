@@ -11,36 +11,36 @@ namespace MCAQuincyApi.API.Controllers;
 
 [ApiController]
 [Route("api/v2/policy")]
-public class PolicyExcludeController : ControllerBase
+public class ChnagePolicyController : ControllerBase
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<PolicyExcludeController> _logger;
+    private readonly ILogger<ChnagePolicyController> _logger;
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public PolicyExcludeController(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<PolicyExcludeController> logger)
+    public ChnagePolicyController(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<ChnagePolicyController> logger)
     {
         _httpClient = httpClientFactory.CreateClient();
         _configuration = configuration;
         _logger = logger;
     }
 
-    [HttpGet("ChangePolicyExclude131/{policyNumber}")]
+    [HttpGet("ChangeChnagePolicy131/{policyNumber}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ChangePolicyExclude131(string policyNumber)
+    public async Task<IActionResult> ChangeChnagePolicy131(string policyNumber)
     {
         var stopwatch = Stopwatch.StartNew();
         try
         {
             //var baseUrl = "http://127.0.0.1:8000/";
             var baseUrl = _configuration["ExternalApi:BaseUrlPY"] ?? "http://10.1.29.18/";
-            var url = $"{baseUrl}api/v2/policy/ChangePolicyExclude131/{Uri.EscapeDataString(policyNumber)}";
+            var url = $"{baseUrl}api/v2/policy/ChangeChnagePolicy131/{Uri.EscapeDataString(policyNumber)}";
 
             _logger.LogInformation("Calling external API: GET {Url}", url);
 
@@ -78,7 +78,7 @@ public class PolicyExcludeController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling ChangePolicyExclude131 API for policy {PolicyNumber}", policyNumber);
+            _logger.LogError(ex, "Error calling ChangeChnagePolicy131 API for policy {PolicyNumber}", policyNumber);
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 ApiResponse<object>.ErrorResponse(
@@ -138,7 +138,7 @@ public class PolicyExcludeController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling ChangePolicyExclude131 API for policy {PolicyNumber}", policyNumber);
+            _logger.LogError(ex, "Error calling ChangeChnagePolicy131 API for policy {PolicyNumber}", policyNumber);
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 ApiResponse<object>.ErrorResponse(
@@ -210,16 +210,16 @@ public class PolicyExcludeController : ControllerBase
     }
 }
 
-public class ChangePolicyExcludeApiResponse
+public class ChangeChnagePolicyApiResponse
 {
     [JsonPropertyName("result")]
-    public ChangePolicyExcludeResult? Result { get; set; }
+    public ChangeChnagePolicyResult? Result { get; set; }
 
     [JsonPropertyName("process time")]
     public string? ProcessTime { get; set; }
 }
 
-public class ChangePolicyExcludeResult
+public class ChangeChnagePolicyResult
 {
     [JsonPropertyName("success")]
     public bool Success { get; set; }
@@ -234,18 +234,18 @@ public class ChangePolicyExcludeResult
     public long? DurationMs { get; set; }
 
     [JsonPropertyName("data")]
-    public List<ChangePolicyExcludeData?> Data { get; set; } = new();
+    public List<ChangeChnagePolicyData?> Data { get; set; } = new();
 }
 
-public class ChangePolicyExcludeResponse
+public class ChangeChnagePolicyResponse
 {
     [JsonPropertyName("data")]
-    public List<ChangePolicyExcludeData?> Data { get; set; } = new();
+    public List<ChangeChnagePolicyData?> Data { get; set; } = new();
 }
 
 [JsonDerivedType(typeof(TotalPremiumData), "TOTALPREMIUM")]
 [JsonDerivedType(typeof(TableData), "tableName")]
-public class ChangePolicyExcludeData
+public class ChangeChnagePolicyData
 {
     [JsonPropertyName("TOTALPREMIUM")]
     public object? TOTALPREMIUM { get; set; }
@@ -257,13 +257,13 @@ public class ChangePolicyExcludeData
     public List<Dictionary<string, object>>? TableValue { get; set; }
 }
 
-public class TotalPremiumData : ChangePolicyExcludeData
+public class TotalPremiumData : ChangeChnagePolicyData
 {
     [JsonPropertyName("TOTALPREMIUM")]
     public new object? TOTALPREMIUM { get; set; }
 }
 
-public class TableData : ChangePolicyExcludeData
+public class TableData : ChangeChnagePolicyData
 {
     [JsonPropertyName("tableName")]
     public new string? TableName { get; set; }
@@ -284,7 +284,7 @@ public class RateMcaDataTable
 public class RateMcaDataResponse
 {
     [JsonPropertyName("data")]
-    public List<ChangePolicyExcludeData?> Data { get; set; } = new();
+    public List<ChangeChnagePolicyData?> Data { get; set; } = new();
 }
 
 public class RateMcaDataApiResponse
