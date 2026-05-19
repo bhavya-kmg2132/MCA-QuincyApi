@@ -38,9 +38,69 @@ public class PolicyExcludeController : ControllerBase
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            var baseUrl = "http://127.0.0.1:8000/";
-            //_configuration["ExternalApi:BaseUrl"] ?? "http://127.0.0.1:8000/";
+            //var baseUrl = "http://127.0.0.1:8000/";
+            var baseUrl = _configuration["ExternalApi:BaseUrlPY"] ?? "http://10.1.29.18/";
             var url = $"{baseUrl}api/v2/policy/ChangePolicyExclude131/{Uri.EscapeDataString(policyNumber)}";
+
+            _logger.LogInformation("Calling external API: GET {Url}", url);
+
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return NotFound(ApiResponse<object>.ErrorResponse(
+                    "Policy not found",
+                    "POLICY_NOT_FOUND",
+                    stopwatch.ElapsedMilliseconds));
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogError(
+                    "External API returned {StatusCode}. Response: {ErrorBody}",
+                    (int)response.StatusCode, errorBody);
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    ApiResponse<object>.ErrorResponse(
+                        $"External API returned {(int)response.StatusCode}",
+                        "EXTERNAL_API_ERROR",
+                        stopwatch.ElapsedMilliseconds));
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            stopwatch.Stop();
+
+            // Return the external API response directly without wrapping
+            return Content(responseBody, "application/json");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling ChangePolicyExclude131 API for policy {PolicyNumber}", policyNumber);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ApiResponse<object>.ErrorResponse(
+                    $"Unable to retrieve policy exclude data. {ex.Message}",
+                    "POLICY_EXCLUDE_RETRIEVAL_FAILED",
+                    stopwatch.ElapsedMilliseconds));
+        }
+    }
+
+
+[HttpGet("ChangePolicy/{policyNumber}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ChangePolicy(string policyNumber)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+           //var baseUrl = "http://127.0.0.1:8000/";
+            var baseUrl = _configuration["ExternalApi:BaseUrlPY"] ?? "http://10.1.29.18/";
+            var url = $"{baseUrl}api/v2/policy/ChangePolicy/{Uri.EscapeDataString(policyNumber)}";
 
             _logger.LogInformation("Calling external API: GET {Url}", url);
 
