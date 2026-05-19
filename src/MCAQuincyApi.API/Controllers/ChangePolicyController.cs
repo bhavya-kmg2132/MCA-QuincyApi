@@ -29,18 +29,17 @@ public class ChangePolicyController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("ChangeChangePolicy131/{policyNumber}")]
+    [HttpGet("ChangePolicyExclude131/{policyNumber}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ChangeChangePolicy131(string policyNumber)
+    public async Task<IActionResult> ChangePolicyExclude131(string policyNumber)
     {
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            //var baseUrl = "http://127.0.0.1:8000/";
             var baseUrl = _configuration["ExternalApi:BaseUrlPY"] ?? "http://10.1.29.18/";
-            var url = $"{baseUrl}api/v2/policy/ChangeChangePolicy131/{Uri.EscapeDataString(policyNumber)}";
+            var url = $"{baseUrl}api/v2/policy/ChangePolicyExclude131/{Uri.EscapeDataString(policyNumber)}";
 
             _logger.LogInformation("Calling external API: GET {Url}", url);
 
@@ -73,12 +72,11 @@ public class ChangePolicyController : ControllerBase
             var responseBody = await response.Content.ReadAsStringAsync();
             stopwatch.Stop();
 
-            // Return the external API response directly without wrapping
             return Content(responseBody, "application/json");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling ChangeChangePolicy131 API for policy {PolicyNumber}", policyNumber);
+            _logger.LogError(ex, "Error calling ChangePolicyExclude131 API for policy {PolicyNumber}", policyNumber);
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 ApiResponse<object>.ErrorResponse(
@@ -88,6 +86,7 @@ public class ChangePolicyController : ControllerBase
         }
     }
 
+    
 
 [HttpGet("ChangePolicy/{policyNumber}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
